@@ -1,45 +1,61 @@
 {
-  "about": "Біблія ШІ маркерів для чату рідера. Регулярки без урахування регістру. level error це заборона, warn це місце яке треба перечитати.",
+  "about": "Біблія ШІ маркерів для чату рідера. Регулярки без урахування регістру. level error це заборона, warn це місце яке треба перечитати. family neg це конструкції заперечення і заміни (не X а Y): одна дає попередження, дві і більше в чернетці дають помилку. Фраза з зірочкою в кінці ловить будь-яке закінчення слова.",
   "patterns": [
-    {"id": "dash", "level": "error", "pattern": "[—–]|(?<=\\s)-(?=\\s)", "note": "тире"},
-    {"id": "bullet", "level": "error", "pattern": "^\\s*(?:[*•▪◦]|-(?=\\s)|\\d+[.)](?=\\s))", "note": "маркер списку або нумерація"},
-    {"id": "ne_a", "level": "warn", "pattern": "(?<!\\w)не\\s(?:[^.!?\\n]{1,60}?)[,\\s]\\s*а\\s", "note": "конструкція не X а Y"},
-    {"id": "ne_tse", "level": "warn", "pattern": "(?<!\\w)не\\s[^.!?\\n]{1,60}[.!?]\\s*(?:це|это|а)\\s", "note": "конструкція не X. це Y"},
-    {"id": "ne_prosto", "level": "error", "pattern": "(?<!\\w)не\\s+(?:просто|лише|тільки|только)(?!\\w)[^.!?\\n]{0,60}?[,\\s]\\s*(?:а|но|але)\\s", "note": "не просто X а Y"},
-    {"id": "tse_ne_pro", "level": "error", "pattern": "(?<!\\w)(?:це|это)\\s+не\\s+про(?!\\w)", "note": "це не про X"},
-    {"id": "bez_bez", "level": "error", "pattern": "(?<!\\w)без\\s+\\w+[,\\s]+без(?!\\w)", "note": "пара без X без Y"},
-    {"id": "rhetorical", "level": "warn", "pattern": "\\?[ \\t]+\\w", "note": "питання і одразу відповідь в тому ж повідомленні"},
+    {"id": "dash", "level": "error", "pattern": "[—–―‒−]|(?<=\\s)-{1,2}(?=\\s|$)", "note": "тире"},
+    {"id": "bullet", "level": "error", "pattern": "^\\s*(?:[*•▪◦]|\\d+[.)](?=\\s))", "note": "маркер списку або нумерація"},
+    {"id": "ne_a", "level": "warn", "family": "neg", "pattern": "(?<!\\w)не\\s(?:[^.!?\\n]{1,60}?)[,\\s]\\s*а\\s", "note": "конструкція не X а Y"},
+    {"id": "ne_tse", "level": "warn", "family": "neg", "pattern": "(?<!\\w)не\\s[^.!?\\n]{1,60}[.!?]\\s*(?:це|это|а)\\s", "note": "конструкція не X. це Y"},
+    {"id": "ne_pron", "level": "warn", "family": "neg", "pattern": "(?<!\\w)(він|вона|воно|вони|ти|он|она|оно|они|ты)\\s+не\\s+[^.!?\\n,]{1,40}[,.]\\s*\\1\\s", "note": "конструкція він не X, він Y"},
+    {"id": "ne_prosto", "level": "error", "family": "neg", "pattern": "(?<!\\w)не\\s+(?:просто|лише|тільки|только)(?!\\w)[^.!?\\n]{0,60}?(?:[,\\s]\\s*(?:а|но|але|це|это)\\s|[,.]\\s*(?:він|вона|вони|ти|он|она|они|ты)\\s)", "note": "не просто X а Y"},
+    {"id": "tse_ne_pro", "level": "error", "family": "neg", "pattern": "(?<!\\w)(?:це|это)\\s+не\\s+про(?!\\w)", "note": "це не про X"},
+    {"id": "bez_bez", "level": "error", "pattern": "(?<!\\w)без\\s+[^.!?\\n,]{1,25}?[,\\s]+(?:(?:і|й|и|та)\\s+)?без(?!\\w)|\\bwithout\\s+[^.!?\\n,]{1,25}?,?\\s+(?:and\\s+)?without\\b", "note": "пара без X без Y"},
+    {"id": "rhetorical", "level": "warn", "pattern": "\\?\\s+\\w", "note": "питання і одразу текст після нього в тому ж повідомленні"},
     {"id": "ellipsis", "level": "warn", "pattern": "\\.\\.\\.|…", "note": "три крапки як інтрига"},
-    {"id": "en_not_just", "level": "error", "pattern": "(?<!\\w)not\\s+(?:just|only|simply)\\b[^.!?\\n]{0,60}?\\bbut\\b", "note": "not just X but Y"},
-    {"id": "en_not_about", "level": "error", "pattern": "\\b(?:it'?s|this is|that'?s|it is)\\s+not\\s+about\\b", "note": "it's not about X"},
-    {"id": "en_isnt_its", "level": "warn", "pattern": "\\bisn'?t\\b[^.!?\\n]{1,60}?[,.]\\s*(?:it'?s|he'?s|she'?s)\\b", "note": "isn't X, it's Y"}
+    {"id": "vague_smth", "level": "error", "pattern": "(?<!\\w)щось\\s+(?:таке|що мене|від чого)|(?<!\\w)і ось що(?:\\s+\\w+){0,2}\\s+(?:здивувало|зачепило|побачила)|(?<!\\w)что-то\\s+(?:такое|что меня|от чего)|(?<!\\w)и вот что(?:\\s+\\w+){0,2}\\s+(?:удивило|зацепило|увидела)", "note": "анонс без змісту"},
+    {"id": "vague_one", "level": "warn", "pattern": "(?<!\\w)(?:одн\\w*|one)\\s+(?:\\w+\\s+)?(?:людин\\w*|обстав\\w*|обстоят\\w*|фраз\\w*|звичк\\w*|річ|person|thing|circumstance)(?!\\w)", "note": "недомовка: назви хто це, яка роль, одна деталь"},
+    {"id": "worn_cards", "level": "warn", "pattern": "(?:карти|карты)\\s+(?:\\w+\\s+){0,4}?(?:підтвер|подтвер|показують те саме)|\\bcards\\s+(?:\\w+\\s+){0,3}?confirm", "note": "зношена формула карти підтверджують, назви карту"},
+    {"id": "worn_unnoticed", "level": "warn", "pattern": "не помічаючи|не замечая|without (?:you )?noticing|(?:помилк|звичк|ошибк)\\w*\\s+(?:\\w+\\s+){0,3}?(?:повторюєш|повторяешь|совершаешь)", "note": "тема з прикладів про помилку не помічаючи, чергуй"},
+    {"id": "worn_date_frame", "level": "warn", "pattern": "дат(?:ою|ой)\\s+(?:виходить|выходит)|\\bin your date\\b", "note": "рамка з прикладу SKILL.md про число з дати"},
+    {"id": "worn_trial", "level": "error", "pattern": "рідкісн\\w*\\s+код|редк\\w*\\s+код|rare code|тільки почала зчитувати|только начала считывать", "note": "формула з пробних чатів"},
+    {"id": "en_not_just", "level": "error", "family": "neg", "pattern": "(?<!\\w)not\\s+(?:just|only|simply)\\b[^.!?\\n]{0,60}?\\bbut\\b", "note": "not just X but Y"},
+    {"id": "en_not_about", "level": "error", "family": "neg", "pattern": "\\b(?:it|this|that)(?:'?s\\s+not|\\s+is\\s+not|\\s+isn'?t)\\s+about\\b", "note": "it's not about X"},
+    {"id": "en_not_x_its_y", "level": "error", "family": "neg", "pattern": "\\b(?:it|he|she|this|that)(?:'?s|\\s+is)\\s+not\\b[^.!?\\n]{1,60}?[,.]\\s*(?:it|he|she|this|that)(?:'?s|\\s+is)\\b", "note": "it's not X, it's Y"},
+    {"id": "en_isnt_its", "level": "warn", "family": "neg", "pattern": "\\bisn'?t\\b[^.!?\\n]{1,60}?[,.]\\s*(?:it'?s|he'?s|she'?s)\\b", "note": "isn't X, it's Y"},
+    {"id": "en_neg_restart", "level": "warn", "family": "neg", "pattern": "\\b(he|she|it)\\s+(?:isn'?t|is not|wasn'?t|doesn'?t|didn'?t)\\s+\\w+[^.!?\\n]{0,30}?[,.]\\s*\\1\\s+\\w+", "note": "she doesn't X, she Y"},
+    {"id": "en_not_that", "level": "error", "family": "neg", "pattern": "\\bit'?s not that\\b", "note": "it's not that X"}
   ],
   "phrases": {
     "uk": [
       "давайте розберемось", "давайте розберемося", "давайте зануримось", "давайте зануримося",
+      "давай розберемось", "давай розберемося", "давай зануримось", "давай зануримося", "заглибимо*",
       "у сучасному світі", "в сучасному світі", "важливо розуміти", "важливо зазначити", "варто зазначити",
       "більше того", "крім того", "справді", "по-людськи", "по суті", "не просто так",
-      "і ось тут", "важлива деталь", "хочу сказати дуже чітко", "і ось що мене здивувало",
+      "і ось тут", "важлива деталь", "хочу сказати дуже чітко", "мушу сказати", "в хорошому сенсі", "в поганому сенсі",
       "це різні речі", "не вкладається в просте",
       "чоловіки завжди", "жінки завжди", "чоловіки так роблять", "жінки так роблять", "такі люди", "такі пари",
-      "просто тиша", "все буде добре", "палітра", "симфонія", "у підсумку", "таким чином",
-      "вирішальних моментів", "придати значення", "якщо придати"
+      "просто тиша", "все буде добре", "палітр*", "симфоні*", "у підсумку", "таким чином",
+      "вирішальних моментів", "придати значення", "якщо придати",
+      "твоя енергія дуже світла", "десятки років", "безліч відгуків"
     ],
     "ru": [
-      "давайте разберемся", "давайте разберёмся", "давайте погрузимся", "разберем это подробно",
+      "давайте разберемся", "давайте разберёмся", "давайте погрузимся", "давай разберемся", "давай разберёмся",
+      "давай погрузимся", "разберем это подробно",
       "в современном мире", "важно понимать", "стоит отметить", "важно отметить",
       "более того", "кроме того", "действительно", "по-человечески", "по сути", "не просто так",
       "и вот тут", "важная деталь", "это разные вещи", "не укладывается в простое",
       "мужчины всегда", "женщины всегда", "такие люди", "такие пары", "просто тишина",
-      "все будет хорошо", "всё будет хорошо", "палитра", "симфония", "таким образом", "а так же"
+      "все будет хорошо", "всё будет хорошо", "палитр*", "симфони*", "таким образом", "а так же",
+      "твоя энергия очень светлая", "десятки лет", "множество положительных отзывов"
     ],
     "en": [
-      "let's dive", "dive into", "dive deep", "delve", "let's unpack", "in today's world",
-      "it's important to note", "it is important to note", "it's important to understand",
+      "let's dive", "dive into", "dive deep", "delve*", "let's unpack", "in today's world",
+      "it's important to note", "it is important to note", "it's important to understand", "it's worth noting",
       "moreover", "furthermore", "additionally", "in conclusion", "ultimately",
-      "tapestry", "testament to", "navigate", "rest assured", "here's the thing",
+      "tapestry", "testament to", "navigate", "rest assured", "here's the thing", "here's what i see",
+      "i want to be honest", "let me be clear", "at the end of the day", "deep down", "hold space",
+      "the universe is telling",
       "men always", "women always", "people like that", "everything will be fine",
-      "symphony", "realm", "unlock", "embark", "profound"
+      "symphony", "realm", "unlock", "embark", "profound", "journey"
     ]
   }
 }
