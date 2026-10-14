@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Знак, стихія, число життєвого шляху, китайський рік і збіги пари за датами народження."""
+"""Знак, стихія, число життєвого шляху, китайський рік, збіги пари і найближчі дати за датами народження."""
 import argparse
 import re
 import sys
-from datetime import date
+from datetime import date, timedelta
 
 SIGNS = [
     (1, 20, "Водолій", "Aquarius", "повітря", "з Водолієм"),
@@ -23,6 +23,32 @@ ANIMALS = ["Щур", "Бик", "Тигр", "Кролик", "Дракон", "Зм
 MONTHS = ["січня", "лютого", "березня", "квітня", "травня", "червня",
           "липня", "серпня", "вересня", "жовтня", "листопада", "грудня"]
 FRIENDLY = {frozenset(["вогонь", "повітря"]), frozenset(["земля", "вода"])}
+FIXED_HOLIDAYS = [
+    (1, 1, "Новий рік"), (2, 14, "День святого Валентина"), (3, 17, "День святого Патрика"),
+    (7, 4, "День незалежності США"), (10, 31, "Хелловін"), (12, 25, "Різдво"),
+]
+HORIZON = 92
+TODAY = date.today()
+
+
+def plural(n, one, few, many):
+    if n % 10 == 1 and n % 100 != 11:
+        return f"{n} {one}"
+    if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14):
+        return f"{n} {few}"
+    return f"{n} {many}"
+
+
+def years(n):
+    return plural(n, "рік", "роки", "років")
+
+
+def days(n):
+    return plural(n, "день", "дні", "днів")
+
+
+def human(dt):
+    return f"{dt.day} {MONTHS[dt.month - 1]}"
 
 
 def parse(raw, dmy):
@@ -31,9 +57,11 @@ def parse(raw, dmy):
         sys.exit(f"не розпізнала дату {raw}")
     a, b, y = parts
     if y < 100:
-        y += 1900 if y > date.today().year % 100 else 2000
-    m, d = (b, a) if dmy else (a, b)
+        y += 1900 if y > TODAY.year % 100 else 2000
     note = ""
+    if not dmy and "." in raw and "/" not in raw:
+        dmy, note = True, "дата з крапками, прочитала як день першим"
+    m, d = (b, a) if dmy else (a, b)
     if m > 12 and d <= 12:
         m, d, note = d, m, "схоже на день першим, прочитала як ДД/ММ"
     try:
@@ -79,23 +107,68 @@ def animal(dt):
 
 
 def age(dt):
-    today = date.today()
-    return today.year - dt.year - ((today.month, today.day) < (dt.month, dt.day))
+    return TODAY.year - dt.year - ((TODAY.month, TODAY.day) < (dt.month, dt.day))
 
 
-def years(n):
-    if n % 10 == 1 and n % 100 != 11:
-        return f"{n} рік"
-    if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14):
-        return f"{n} роки"
-    return f"{n} років"
+def next_birthday(dt):
+    for y in (TODAY.year, TODAY.year + 1):
+        try:
+            bd = date(y, dt.month, dt.day)
+        except ValueError:
+            bd = date(y, 2, 28)
+        if bd >= TODAY:
+            return bd
+
+
+def nth_weekday(y, m, weekday, n):
+    first = date(y, m, 1)
+    return first + timedelta(days=(weekday - first.weekday()) % 7 + 7 * (n - 1))
+
+
+def easter(y):
+    a, b, c = y % 19, y // 100, y % 100
+    d, e = b // 4, b % 4
+    g = (b - (b + 8) // 25 + 1) // 3
+    h = (19 * a + b - d - g + 15) % 30
+    i, k = c // 4, c % 4
+    l = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * l) // 451
+    return date(y, (h + l - 7 * m + 114) // 31, (h + l - 7 * m + 114) % 31 + 1)
+
+
+def holidays(y):
+    events = [(date(y, m, d), name) for m, d, name in FIXED_HOLIDAYS]
+    events += [
+        (easter(y), "Великдень"),
+        (nth_weekday(y, 5, 6, 2), "День матері в США"),
+        (nth_weekday(y, 6, 6, 3), "День батька в США"),
+        (nth_weekday(y, 11, 3, 4), "День подяки"),
+    ]
+    return events
+
+
+def upcoming(births):
+    events = []
+    for label, dt in births:
+        bd = next_birthday(dt)
+        if (bd - TODAY).days <= HORIZON:
+            events.append((bd, f"день народження людини з {label}, виповниться {years(bd.year - dt.year)}"))
+    for y in (TODAY.year, TODAY.year + 1):
+        events += [(d, n) for d, n in holidays(y) if 0 <= (d - TODAY).days <= HORIZON]
+    print(f"найближчі 3 місяці від {human(TODAY)} {TODAY.year}:")
+    if not events:
+        print("  нічого")
+    for d, name in sorted(events):
+        left = (d - TODAY).days
+        when = "сьогодні" if left == 0 else f"через {days(left)}"
+        print(f"  {human(d)}, {when}: {name}")
 
 
 def describe(label, dt, note):
     idx = sign_index(dt)
     _, _, uk, en, element, _ = SIGNS[idx]
     edge = cusp(dt, idx)
-    print(f"{label}: {dt.day} {MONTHS[dt.month - 1]} {dt.year}, {years(age(dt))}")
+    print(f"{label}: {human(dt)} {dt.year}, {years(age(dt))}")
     if note:
         print(f"  {note}")
     print(f"  знак: {uk} ({en}), стихія {element}" + (f", {edge}" if edge else ""))
@@ -133,16 +206,21 @@ def pair(d1, s1, d2, s2):
 
 
 def main():
+    global TODAY
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("dates", nargs="+", help="одна або дві дати, за замовчуванням ММ/ДД/РРРР")
-    ap.add_argument("--dmy", action="store_true", help="дати в форматі ДД.ММ.РРРР")
+    ap.add_argument("dates", nargs="+", help="одна або дві дати; зі слешами місяць першим, з крапками день першим")
+    ap.add_argument("--dmy", action="store_true", help="примусово день першим")
+    ap.add_argument("--today", help="яку дату вважати сьогоднішньою, РРРР-ММ-ДД")
     args = ap.parse_args()
+    if args.today:
+        TODAY = date.fromisoformat(args.today)
     if len(args.dates) > 2:
         sys.exit("максимум дві дати")
     parsed = [parse(raw, args.dmy) for raw in args.dates]
     signs = [describe(f"дата {i}", dt, note) for i, (dt, note) in enumerate(parsed, 1)]
     if len(parsed) == 2:
         pair(parsed[0][0], signs[0], parsed[1][0], signs[1])
+    upcoming([(f"дати {i}", dt) for i, (dt, _) in enumerate(parsed, 1)])
 
 
 if __name__ == "__main__":

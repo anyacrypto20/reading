@@ -16,11 +16,24 @@ CYR = re.compile("[а-яА-ЯіїєґІЇЄҐёЁ]")
 BOOKING = re.compile(r"(?i)заброн|читанн|чтени|book|reading")
 SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
 RU_I = re.compile(r"(?<!\w)и(?!\w)", re.I)
-MASC_WORDS = r"готовий|радий|вдячний|впевнений|побачив|відчув|почав|зрозумів|хотів|бачив|помітив|зробив|написав|розкрив|зчитав|глянув|був|\w+ився"
-FEM_WORDS = r"готова|рада|вдячна|впевнена|\w+ла|\w+лась"
+UK_MASC = r"готовий|радий|вдячний|впевнений|побачив|відчув|почав|зрозумів|хотів|бачив|помітив|зробив|написав|розкрив|зчитав|глянув|був|прийшов|\w+ився"
+UK_FEM = r"готова|рада|вдячна|впевнена|\w+ла|\w+лась"
+RU_MASC = r"рад|готов|уверен|благодарен|пришел|пришёл|\w+(?:ел|ал|ил|ял|ыл|ул)(?:ся)?"
+RU_FEM = r"рада|готова|уверена|благодарна|\w+ла|\w+лась"
+NOT_VERBS = r"(?!(?:знов|любов|здоров|готов|знову|себе)(?!\w))"
+
+
+def gender_rx(pronouns, words):
+    return re.compile(rf"(?<!\w)(?:{pronouns})\s+(?:\w+\s+){{0,2}}?{NOT_VERBS}(?:{words})(?!\w)", re.I)
+
+
 GENDER_SLIP = {
-    "f": re.compile(rf"(?<!\w)я\s+(?:\w+\s+){{0,2}}?(?:{MASC_WORDS})(?!\w)", re.I),
-    "m": re.compile(rf"(?<!\w)я\s+(?:\w+\s+){{0,2}}?(?:{FEM_WORDS})(?!\w)", re.I),
+    ("uk", "f"): gender_rx("я", UK_MASC), ("uk", "m"): gender_rx("я", UK_FEM),
+    ("ru", "f"): gender_rx("я", RU_MASC), ("ru", "m"): gender_rx("я", RU_FEM),
+}
+CLIENT_SLIP = {
+    ("uk", "f"): gender_rx("ти", UK_MASC), ("uk", "m"): gender_rx("ти", UK_FEM),
+    ("ru", "f"): gender_rx("ты", RU_MASC), ("ru", "m"): gender_rx("ты", RU_FEM),
 }
 
 
@@ -44,6 +57,7 @@ def main():
     ap.add_argument("file", nargs="?", help="файл з чернеткою, без нього читається stdin")
     ap.add_argument("--lang", choices=["uk", "ru", "en"], help="мова, за замовчуванням визначається сама")
     ap.add_argument("--persona", choices=["f", "m"], default="f", help="рід рідера, за замовчуванням жінка")
+    ap.add_argument("--client", choices=["f", "m"], help="рід клієнта, якщо відомий")
     args = ap.parse_args()
 
     text = Path(args.file).read_text(encoding="utf-8") if args.file else sys.stdin.read()
@@ -59,7 +73,7 @@ def main():
 
     if lang == "mixed":
         add(0, "error", "суміш української і російської літер", "")
-        lang_phrases = data["phrases"]["uk"] + data["phrases"]["ru"]
+        lang_phrases = list(dict.fromkeys(data["phrases"]["uk"] + data["phrases"]["ru"]))
     else:
         lang_phrases = data["phrases"].get(lang, [])
     phrases = [(p, phrase_regex(p)) for p in lang_phrases]
@@ -72,12 +86,16 @@ def main():
         for p, rx in phrases:
             if rx.search(msg):
                 add(n, "error", "ШІ фраза", p)
-        if lang == "uk":
-            if RU_I.search(msg):
-                add(n, "error", "російське и в українському тексті", msg[:40])
-            m = GENDER_SLIP[args.persona].search(msg)
+        msg_lang = detect_lang(msg) if lang == "mixed" else lang
+        if msg_lang == "uk" and RU_I.search(msg):
+            add(n, "error", "російське и в українському тексті", msg[:40])
+        if msg_lang in ("uk", "ru"):
+            m = GENDER_SLIP[(msg_lang, args.persona)].search(msg)
             if m:
                 add(n, "error", "рід не збігається з персоною", m.group(0))
+            m = args.client and CLIENT_SLIP[(msg_lang, args.client)].search(msg)
+            if m:
+                add(n, "error", "рід не збігається з клієнтом", m.group(0))
 
         first = next((c for c in msg if c.isalpha()), "")
         if first.isupper():
