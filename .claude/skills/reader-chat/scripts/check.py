@@ -17,7 +17,7 @@ RU_ONLY = re.compile("[ыэъёЫЭЪЁ]")
 CYR = re.compile("[а-яА-ЯіїєґІЇЄҐёЁ]")
 RU_WORDS = re.compile(r"(?<!\w)(?:и|что|как|когда|если|очень|сейчас|меня|тебя|мне|она|его|будет|также|тоже|только|конечно|спасибо|привет|рождения|рождение|чувствую|пожалуйста|более|милая|дорогая|думает|хочет|знает|может|вижу|чтобы|нет)(?!\w)", re.I)
 UK_WORDS = re.compile(r"(?<!\w)(?:що|він|вона|це|дуже|теж|дякую|якщо|тобою)(?!\w)", re.I)
-BOOKING = re.compile(r"(?i)заброн|\bbook\b")
+BOOKING = re.compile(r"(?i)заброн|приходь на читання|\bbook\b")
 SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
 PROPER = re.compile(r"(?<=[\w,;:]\s)([A-ZА-ЯІЇЄҐЁ][\w']*)")
 ANSWER_START = re.compile(r"(?i)(?:бо|тому що|потому что|because)(?!\w)")
@@ -152,8 +152,8 @@ def main():
         if body.endswith(".") and not body.endswith("..."):
             add(n, "warn", "крапка в кінці повідомлення", msg[-30:])
         emojis = EMOJI.findall(msg)
-        if len(emojis) > 2:
-            add(n, "error", f"емоджі {len(emojis)}, максимум 2", "".join(emojis))
+        if len(emojis) > 1:
+            add(n, "error", f"емоджі {len(emojis)}, максимум 1", "".join(emojis))
         if emojis and EMOJI.search(body):
             add(n, "warn", "емоджі не в кінці")
         if len(WORD.findall(msg)) == 1:
