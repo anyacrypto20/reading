@@ -306,7 +306,7 @@ def main():
     labels = [given[i] if i < len(given) else f"дата {i + 1}" for i in range(2)]
     region = args.region or ("us" if any("/" in r for r in raw_dates) else "ua")
     split = [[int(x) for x in re.split(r"[/.\-\s]+", r.strip()) if x.isdigit()] for r in raw_dates]
-    mdy_proven = any("/" in r and len(p) == 3 and p[0] <= 12 < p[1] for r, p in zip(raw_dates, split))
+    mdy_proven = not args.dmy and any("." not in r and len(p) == 3 and p[0] <= 12 < p[1] for r, p in zip(raw_dates, split))
     parsed = [parse(raw, args.dmy, mdy_proven) for raw in raw_dates]
     idxs = [describe(labels[i], dt, note) for i, (dt, note) in enumerate(parsed)]
     if len(parsed) == 2:
